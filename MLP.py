@@ -51,12 +51,15 @@ class MLP:
         results = np.array(results)
         return results
 
-    def backpropogation(self, inputs, outputs):
-        expected = self.predict(inputs)
+    def backpropogation(self, inputs, expected):
+        outputs = self.predict(inputs)
         n_layer = None
-        for idx, layer in enumerate(reversed(self.layers)):
-            layer.calculate_deltas(expected, outputs, n_layer)
-            n_layer = self.layers[len(self.layers) - (idx+1)]
+        for inp_idx, input in enumerate(inputs):
+            for idx, layer in enumerate(reversed(self.layers)):
+                layer.calculate_deltas(expected, outputs[inp_idx], n_layer)
+                n_layer = self.layers[len(self.layers) - (idx+1)]
+            for layer in self.layers:
+                layer.update_weights(self.learning_rate)
         return self.layers[0].deltas
 
 
@@ -101,8 +104,12 @@ class Layer:
             self.deltas = (transfer_derivative()) * np.sum(
                            next_layer.weights * next_layer.deltas)
 
+    def update_weights(self, learning_rate):
+        multiplier = (-learning_rate*self.deltas*self.activations)
+        self.weights = self.weights + multiplier
+
 
 dataset = np.array([[2, 1, 2], [4, 2, 8], [3, 3, 9], [5, 10, 50]])
 network = MLP(2, [2, 10], 1, 0.8)
-print(network.backpropogation(np.array([[2, 1], [4, 2]]),
-                              np.array([[2], [8]])))
+print(network.backpropogation(np.array([[2, 1], [4, 2], [1, 1], [3, 3]]),
+                              np.array([[2], [8], [1], [9]])))

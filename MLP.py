@@ -26,20 +26,18 @@ class MLP:
         for idx, layer in enumerate(self.layers):
             if idx == 0:
                 if layer.last:
-                    self.layers[idx].transfer(input, classOrReg)
+                    self.layers[idx].transfer(input)
                     transfer = self.layers[idx].activations
                 else:
-                    self.layers[idx].transfer(input, classOrReg)
+                    self.layers[idx].transfer(input)
                     transfer = np.append(self.layers[idx].activations,
                                          np.array([1]))
-
             else:
-                self.layers[idx].transfer(transfer)
                 if layer.last:
-                    self.layers[idx].transfer(input)
+                    self.layers[idx].transfer(transfer)
                     transfer = self.layers[idx].activations
                 else:
-                    self.layers[idx].transfer(input)
+                    self.layers[idx].transfer(transfer)
                     transfer = np.append(self.layers[idx].activations,
                                          np.array([1]))
         return transfer[0]
@@ -48,10 +46,18 @@ class MLP:
         inputs = np.atleast_2d(inputs)
         results = []
         for input in inputs:
-            result = self.feedforward(inputs)
+            result = self.feedforward(input)
             results += [result]
         results = np.array(results)
         return results
+
+    def backpropogation(self, inputs, outputs):
+        expected = self.predict(inputs)
+        n_layer = None
+        for idx, layer in enumerate(reversed(self.layers)):
+            layer.calculate_deltas(expected, outputs, n_layer)
+            n_layer = self.layers[len(self.layers) - (idx+1)]
+        return self.layers[0].deltas
 
 
 class Layer:
@@ -84,18 +90,19 @@ class Layer:
         self.dotproducts = dots
         self.activations = np.array(dots)
 
-    def set_deltas(self, expected, results, subsequent_layer=None):
+    def calculate_deltas(self, expected, results, next_layer):
 
-        def transfer_derivative(self):
+        def transfer_derivative():
             return self.dotproducts * (1.0 - self.dotproducts)
 
         if self.last:
             self.deltas = -(transfer_derivative()) * (expected - results)
         else:
             self.deltas = (transfer_derivative()) * np.sum(
-                           subsequent_layer.weights * subsequent_layer.deltas)
+                           next_layer.weights * next_layer.deltas)
 
 
 dataset = np.array([[2, 1, 2], [4, 2, 8], [3, 3, 9], [5, 10, 50]])
-network = MLP(2, [2, 2], 1, 0.8)
-print(network.predict(np.array([4, 2])))
+network = MLP(2, [2, 10], 1, 0.8)
+print(network.backpropogation(np.array([[2, 1], [4, 2]]),
+                              np.array([[2], [8]])))

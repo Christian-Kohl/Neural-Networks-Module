@@ -54,13 +54,22 @@ class MLP:
     def backpropogation(self, inputs, expected):
         outputs = self.predict(inputs)
         n_layer = None
-        for inp_idx, input in enumerate(inputs):
-            for idx, layer in enumerate(reversed(self.layers)):
-                layer.calculate_deltas(expected, outputs[inp_idx], n_layer)
-                n_layer = self.layers[len(self.layers) - (idx+1)]
-            for layer in self.layers:
-                layer.update_weights(self.learning_rate)
+        for idx, layer in enumerate(reversed(self.layers)):
+            layer.calculate_deltas(expected, outputs[0, 0], n_layer)
+            n_layer = self.layers[len(self.layers) - (idx+1)]
+        for idx, layer in enumerate(self.layers):
+            if idx == 0:
+                layer.update_weights(self.learning_rate, inputs)
+            else:
+                layer.update_weights(self.learning_rate,
+                                     self.layers[idx-1].activations)
         return self.layers[0].deltas
+
+    def fit(self, dataset, epochs):
+        for epoch in range(0, epochs):
+            np.random.shuffle(dataset)
+            for point in dataset:
+                self.backpropogation(point[:-1], point[-1])
 
 
 class Layer:
@@ -96,7 +105,7 @@ class Layer:
     def calculate_deltas(self, expected, results, next_layer):
 
         def transfer_derivative():
-            return self.dotproducts * (1.0 - self.dotproducts)
+            return self.activations * (1.0 - self.activations)
 
         if self.last:
             self.deltas = -(transfer_derivative()) * (expected - results)
@@ -104,12 +113,13 @@ class Layer:
             self.deltas = (transfer_derivative()) * np.sum(
                            next_layer.weights * next_layer.deltas)
 
-    def update_weights(self, learning_rate):
+    def update_weights(self, learning_rate, input_to_layer):
         multiplier = (-learning_rate*self.deltas*self.activations)
         self.weights = self.weights + multiplier
 
 
-dataset = np.array([[2, 1, 2], [4, 2, 8], [3, 3, 9], [5, 10, 50]])
-network = MLP(2, [2, 10], 1, 0.8)
-print(network.backpropogation(np.array([[2, 1], [4, 2], [1, 1], [3, 3]]),
-                              np.array([[2], [8], [1], [9]])))
+dataset = np.array([[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1]])
+network = MLP(2, [10, 10], 1, 0.1)
+network.fit(dataset, 10000)
+print(dataset[:, -1])
+print(network.predict(dataset[:, :-1]))

@@ -130,10 +130,3 @@ class Layer:
                                      [1]), ]*self.deltas.shape[1]))
         multiplier = (-learning_rate*(self.deltas.T*input))
         self.weights = (self.weights + multiplier)
-
-
-dataset = np.array([[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1]])
-network = MLP(2, [4, 2], 1, 0.1)
-network.fit(dataset, 100000)
-print(dataset[:, -1])
-print(network.predict(dataset[:, :-1]))

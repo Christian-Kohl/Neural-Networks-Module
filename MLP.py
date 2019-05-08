@@ -7,7 +7,7 @@ class MLP:
     classOrReg = False
 
     def __init__(self, input_size, nodes, output_size, learning_rate):
-        np.random.seed(1)
+        np.random.seed(3)
         self.layers = []
 
         if nodes == []:
@@ -51,18 +51,23 @@ class MLP:
         results = np.array(results)
         return results
 
-    def backpropogation(self, inputs, expected):
+    def loss(self, inputs, expected):
         outputs = self.predict(inputs)
+        error = 0.5 * np.sum((outputs - expected)**2)
+        return error
+
+    def backpropogation(self, inputs, expected):
+        outputs = self.feedforward(inputs)
         n_layer = None
         for idx, layer in enumerate(reversed(self.layers)):
-            layer.calculate_deltas(expected, outputs[0, 0], n_layer)
-            n_layer = self.layers[len(self.layers) - (idx+1)]
+            layer.calculate_deltas(expected, outputs, n_layer)
+            n_layer = layer
         for idx, layer in enumerate(self.layers):
             if idx == 0:
-                layer.update_weights(self.learning_rate, inputs)
+                layer.update_weights_input_layer(self.learning_rate, inputs)
             else:
                 layer.update_weights(self.learning_rate,
-                                     self.layers[idx-1].activations)
+                                     self.layers[idx-1])
         return self.layers[0].deltas
 
     def fit(self, dataset, epochs):
@@ -82,6 +87,7 @@ class Layer:
 
     def __init__(self, weights, last=False, diffLast=False):
         self.weights = weights
+        self.weights = np.around(self.weights, 1)
         self.last = last
         self.diffLast = diffLast
 
@@ -110,16 +116,24 @@ class Layer:
         if self.last:
             self.deltas = -(transfer_derivative()) * (expected - results)
         else:
-            self.deltas = (transfer_derivative()) * np.sum(
-                           next_layer.weights * next_layer.deltas)
+            self.deltas = (transfer_derivative().T) * np.sum(
+                           next_layer.weights[:, :-1] * next_layer.deltas.T,
+                           axis=0).T
 
-    def update_weights(self, learning_rate, input_to_layer):
-        multiplier = (-learning_rate*self.deltas*self.activations)
-        self.weights = self.weights + multiplier
+    def update_weights_input_layer(self, learning_rate, inputs):
+        input = np.array(([np.append(inputs, [1]), ]*self.deltas.shape[1]))
+        multiplier = (-learning_rate*(self.deltas.T*input))
+        self.weights = (self.weights + multiplier)
+
+    def update_weights(self, learning_rate, input_layer):
+        input = np.array(([np.append(input_layer.activations,
+                                     [1]), ]*self.deltas.shape[1]))
+        multiplier = (-learning_rate*(self.deltas.T*input))
+        self.weights = (self.weights + multiplier)
 
 
 dataset = np.array([[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1]])
-network = MLP(2, [10, 10], 1, 0.1)
-network.fit(dataset, 10000)
+network = MLP(2, [4, 2], 1, 0.1)
+network.fit(dataset, 100000)
 print(dataset[:, -1])
 print(network.predict(dataset[:, :-1]))

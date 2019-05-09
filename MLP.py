@@ -133,7 +133,7 @@ class Layer:
 
 
 dataset = np.array([[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1]])
-network = MLP(2, [4, 2], 1, 0.1)
+network = MLP(2, [4, 3], 1, 0.1)
 network.fit(dataset, 100000)
 print(dataset[:, -1])
 print(network.predict(dataset[:, :-1]))

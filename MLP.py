@@ -51,9 +51,9 @@ class MLP:
         results = np.array(results)
         return results
 
-    def loss(self, inputs, expected):
+    def mse_loss(self, inputs, expected):
         outputs = self.predict(inputs)
-        error = 0.5 * np.sum((outputs - expected)**2)
+        error = outputs.shape[0] * np.sum((expected - outputs.T)**2)
         return error
 
     def backpropogation(self, inputs, expected):
@@ -71,10 +71,12 @@ class MLP:
         return self.layers[0].deltas
 
     def fit(self, dataset, epochs):
-        for epoch in range(0, epochs):
+        for epoch in range(1, epochs+1):
             np.random.shuffle(dataset)
             for point in dataset:
                 self.backpropogation(point[:-1], point[-1])
+            print('Epoch number: ', epoch, '  error: ',
+                  self.mse_loss(dataset[:, :-1], dataset[:, -1]))
 
 
 class Layer:

@@ -6,29 +6,38 @@ class MLP:
     learning_rate = 1
     classOrReg = False
     momentum = None
+    reg_term = 0
 
     def __init__(self,
                  input_size,
                  nodes, output_size,
                  learning_rate,
-                 momentum=None):
+                 momentum=None,
+                 reg_term=0):
         np.random.seed(3)
         self.layers = []
 
         if nodes == []:
-            self.layers += Layer(np.random.rand(output_size, input_size+1))
+            self.layers += Layer(np.random.rand(output_size, input_size+1),
+                                 reg_terms=reg_term)
         else:
-            self.layers += [Layer(np.random.rand(nodes[0], input_size+1))]
+            self.layers += [Layer(np.random.rand(nodes[0], input_size+1),
+                                  reg_terms=reg_term)]
             for layer in range(1, len(nodes)):
                 self.layers += [Layer(np.random.rand(nodes[layer],
                                       nodes[layer-1] + 1))]
             self.layers += [Layer(np.random.rand(output_size, nodes[-1]+1),
-                                  last=True)]
+                                  last=True,
+                                  reg_terms=reg_term)]
         self.learning_rate = learning_rate
         if momentum is None:
             self.momentum = 0
         else:
             self.momentum = momentum
+        if reg_term is None:
+            self.reg_term = 0
+        else:
+            self.reg_term = reg_term
 
     def feedforward(self, inputs):
         input = np.append(np.array(inputs), np.array([1]))
@@ -61,6 +70,23 @@ class MLP:
         return results
 
     def mse_loss(self, inputs, expected):
+        if self.reg_term == 0:
+            error = self.mse_loss_wo_reg(inputs, expected)
+        else:
+            error = self.mse_loss_w_reg(inputs, expected)
+        return error
+
+    def mse_loss_w_reg(self, inputs, expected):
+        outputs = self.predict(inputs)
+        acc_term = outputs.shape[0] * np.sum((expected - outputs.T)**2)
+        sum = 0
+        for layer in self.layers:
+            sum += np.sum(np.square(layer.weights))
+        regularisation_error = self.reg_term * sum
+        error = acc_term + regularisation_error
+        return error
+
+    def mse_loss_wo_reg(self, inputs, expected):
         outputs = self.predict(inputs)
         error = outputs.shape[0] * np.sum((expected - outputs.T)**2)
         return error
@@ -80,13 +106,34 @@ class MLP:
                                      self.momentum)
         return self.layers[0].deltas
 
-    def fit(self, dataset, epochs):
-        for epoch in range(1, epochs+1):
-            np.random.shuffle(dataset)
-            for point in dataset:
-                self.backpropogation(point[:-1], point[-1])
-            print('Epoch number: ', epoch, '  error: ',
-                  self.mse_loss(dataset[:, :-1], dataset[:, -1]))
+    def fit(self, dataset, epochs, test_set=None):
+        if test_set is None:
+            for epoch in range(1, epochs+1):
+                np.random.shuffle(dataset)
+                for point in dataset:
+                    self.backpropogation(point[:-1], point[-1])
+                print('Epoch number: ', epoch, '  error: ',
+                      self.mse_loss(dataset[:, :-1],
+                                    dataset[:, -1]))
+        else:
+            log = []
+            for epoch in range(1, epochs+1):
+                np.random.shuffle(dataset)
+                for point in dataset:
+                    self.backpropogation(point[:-1], point[-1])
+                train_loss = self.mse_loss(dataset[:, :-1],
+                                           dataset[:, -1])
+                test_loss = self.mse_loss(test_set[:, :-1],
+                                          test_set[:, -1])
+                log += [[train_loss, test_loss]]
+                print('Epoch number: ',
+                      epoch,
+                      '  error: ',
+                      train_loss,
+                      'test_error: ',
+                      test_loss
+                      )
+            return log
 
 
 class Layer:
@@ -97,13 +144,15 @@ class Layer:
     last = False
     diffLast = False
     prev_inc = None
+    reg_term = 0
 
-    def __init__(self, weights, last=False, diffLast=False):
+    def __init__(self, weights, last=False, diffLast=False, reg_terms=0):
         self.weights = weights
         self.weights = np.around(self.weights, 1)
         self.last = last
         self.diffLast = diffLast
         self.prev_inc = None
+        self.reg_term = reg_terms
 
     def transfer(self, inputs):
         if self.last:
@@ -149,17 +198,18 @@ class Layer:
     def update_weights(self, learning_rate, input_layer, momentum):
         input = np.array(([np.append(input_layer.activations,
                                      [1]), ]*self.deltas.T.shape[0]))
-        multiplier = (-learning_rate*(self.deltas.T*input))
+        multiplier = -learning_rate*(self.deltas.T*input)
         if self.prev_inc is None:
-            inc = multiplier
+            inc = multiplier - (self.reg_term*self.weights)
         else:
-            inc = multiplier + (momentum * self.prev_inc)
+            reg = - (self.reg_term*self.weights)
+            inc = multiplier + (momentum * self.prev_inc) + reg
         self.weights = self.weights + inc
         self.prev_inc = inc
 
 
 dataset = np.array([[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 0]])
-network = MLP(2, [5, 5], 1, 0.01, 0.8)
-network.fit(dataset, 100)
+network = MLP(2, [5, 5], 1, 0.01, 0.2, reg_term=0.001)
+network.fit(dataset, 1000)
 print(dataset[:, -1])
 print(network.predict(dataset[:, :-1]))

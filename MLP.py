@@ -92,27 +92,39 @@ class Layer:
         self.diffLast = diffLast
 
     def transfer(self, inputs):
-        if self.diffLast:
-            self.transfer_last_layer(inputs)
+        if self.last:
+            self.transfer_lin(inputs)
         else:
-            self.transfer_other_layer(inputs)
+            self.transfer_sigmoid(inputs)
 
-    def transfer_other_layer(self, inputs):
+    def transfer_sigmoid(self, inputs):
         dots = np.dot(self.weights, np.atleast_2d(inputs).T)
         self.dotproducts = dots
         act = 1 / (1 + np.exp(-self.dotproducts))
         self.activations = np.array(act)
 
-    def transfer_last_layer(self, inputs):
+    def transfer_ReLU(self, inputs):
         dots = np.dot(self.weights, np.atleast_2d(inputs).T)
         self.dotproducts = dots
-        self.activations = np.array(dots)
+        act = np.where(self.dotproducts >= 0,
+                       self.dotproducts,
+                       self.dotproducts*0.01)
+        self.activations = np.array(act)
+        print(np.array(act).shape)
+
+    def transfer_lin(self, inputs):
+        dots = np.dot(self.weights, np.atleast_2d(inputs).T)
+        self.dotproducts = dots
+        act = self.dotproducts
+        self.activations = np.array(act)
 
     def calculate_deltas(self, expected, results, next_layer):
 
         def transfer_derivative():
-            return self.activations * (1.0 - self.activations)
-
+            if self.last:
+                return 1
+            else:
+                return self.activations * (1.0 - self.activations)
         if self.last:
             self.deltas = -(transfer_derivative()) * (expected - results)
         else:
@@ -127,7 +139,7 @@ class Layer:
 
     def update_weights(self, learning_rate, input_layer):
         input = np.array(([np.append(input_layer.activations,
-                                     [1]), ]*self.deltas.shape[1]))
+                                     [1]), ]*self.deltas.T.shape[0]))
         multiplier = (-learning_rate*(self.deltas.T*input))
         self.weights = (self.weights + multiplier)
 

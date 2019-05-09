@@ -123,7 +123,6 @@ class Layer:
         if self.last:
             self.deltas = -(transfer_derivative()) * (expected - results)
         else:
-            print(type(next_layer.weights[0, 0]))
             self.deltas = (transfer_derivative().T) * np.sum(
                            next_layer.weights[:, :-1] * next_layer.deltas.T,
                            axis=0).T
@@ -136,7 +135,6 @@ class Layer:
     def update_weights(self, learning_rate, input_layer):
         input = np.array(([np.append(input_layer.activations,
                                      [1]), ]*self.deltas.T.shape[0]))
-        print((-learning_rate*(self.deltas.T*input)))
         multiplier = (-learning_rate*(self.deltas.T*input))
         self.weights = (self.weights + multiplier)
 

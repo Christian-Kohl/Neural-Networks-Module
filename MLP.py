@@ -95,13 +95,7 @@ class Layer:
         if self.last:
             self.transfer_lin(inputs)
         else:
-            self.transfer_sigmoid(inputs)
-
-    def transfer_sigmoid(self, inputs):
-        dots = np.dot(self.weights, np.atleast_2d(inputs).T)
-        self.dotproducts = dots
-        act = 1 / (1 + np.exp(-self.dotproducts))
-        self.activations = np.array(act)
+            self.transfer_ReLU(inputs)
 
     def transfer_ReLU(self, inputs):
         dots = np.dot(self.weights, np.atleast_2d(inputs).T)
@@ -110,7 +104,6 @@ class Layer:
                        self.dotproducts,
                        self.dotproducts*0.01)
         self.activations = np.array(act)
-        print(np.array(act).shape)
 
     def transfer_lin(self, inputs):
         dots = np.dot(self.weights, np.atleast_2d(inputs).T)
@@ -124,10 +117,13 @@ class Layer:
             if self.last:
                 return 1
             else:
-                return self.activations * (1.0 - self.activations)
+                return np.where(self.dotproducts >= 0,
+                                1,
+                                0.01)
         if self.last:
             self.deltas = -(transfer_derivative()) * (expected - results)
         else:
+            print(type(next_layer.weights[0, 0]))
             self.deltas = (transfer_derivative().T) * np.sum(
                            next_layer.weights[:, :-1] * next_layer.deltas.T,
                            axis=0).T
@@ -140,12 +136,13 @@ class Layer:
     def update_weights(self, learning_rate, input_layer):
         input = np.array(([np.append(input_layer.activations,
                                      [1]), ]*self.deltas.T.shape[0]))
+        print((-learning_rate*(self.deltas.T*input)))
         multiplier = (-learning_rate*(self.deltas.T*input))
         self.weights = (self.weights + multiplier)
 
 
-dataset = np.array([[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1]])
-network = MLP(2, [4, 3], 1, 0.1)
-network.fit(dataset, 100000)
+dataset = np.array([[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 0]])
+network = MLP(2, [5, 5], 1, 0.1)
+network.fit(dataset, 1000)
 print(dataset[:, -1])
 print(network.predict(dataset[:, :-1]))

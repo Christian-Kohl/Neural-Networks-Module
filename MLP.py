@@ -5,8 +5,13 @@ class MLP:
     layers = []
     learning_rate = 1
     classOrReg = False
+    momentum = None
 
-    def __init__(self, input_size, nodes, output_size, learning_rate):
+    def __init__(self,
+                 input_size,
+                 nodes, output_size,
+                 learning_rate,
+                 momentum=None):
         np.random.seed(3)
         self.layers = []
 
@@ -20,6 +25,10 @@ class MLP:
             self.layers += [Layer(np.random.rand(output_size, nodes[-1]+1),
                                   last=True)]
         self.learning_rate = learning_rate
+        if momentum is None:
+            self.momentum = 0
+        else:
+            self.momentum = momentum
 
     def feedforward(self, inputs):
         input = np.append(np.array(inputs), np.array([1]))
@@ -67,7 +76,8 @@ class MLP:
                 layer.update_weights_input_layer(self.learning_rate, inputs)
             else:
                 layer.update_weights(self.learning_rate,
-                                     self.layers[idx-1])
+                                     self.layers[idx-1],
+                                     self.momentum)
         return self.layers[0].deltas
 
     def fit(self, dataset, epochs):
@@ -86,12 +96,14 @@ class Layer:
     deltas = []
     last = False
     diffLast = False
+    prev_inc = None
 
     def __init__(self, weights, last=False, diffLast=False):
         self.weights = weights
         self.weights = np.around(self.weights, 1)
         self.last = last
         self.diffLast = diffLast
+        self.prev_inc = None
 
     def transfer(self, inputs):
         if self.last:
@@ -134,15 +146,20 @@ class Layer:
         multiplier = (-learning_rate*(self.deltas.T*input))
         self.weights = (self.weights + multiplier)
 
-    def update_weights(self, learning_rate, input_layer):
+    def update_weights(self, learning_rate, input_layer, momentum):
         input = np.array(([np.append(input_layer.activations,
                                      [1]), ]*self.deltas.T.shape[0]))
         multiplier = (-learning_rate*(self.deltas.T*input))
-        self.weights = (self.weights + multiplier)
+        if self.prev_inc is None:
+            inc = multiplier
+        else:
+            inc = multiplier + (momentum * self.prev_inc)
+        self.weights = self.weights + inc
+        self.prev_inc = inc
 
 
 dataset = np.array([[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 0]])
-network = MLP(2, [5, 5], 1, 0.1)
-network.fit(dataset, 1000)
+network = MLP(2, [5, 5], 1, 0.01, 0.8)
+network.fit(dataset, 100)
 print(dataset[:, -1])
 print(network.predict(dataset[:, :-1]))

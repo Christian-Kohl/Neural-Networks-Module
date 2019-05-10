@@ -197,6 +197,7 @@ class Layer:
 
     def update_weights(self, learning_rate, input_layer, momentum):
         input = np.array(([np.append(input_layer.activations,
+
                                      [1]), ]*self.deltas.T.shape[0]))
         multiplier = -learning_rate*(self.deltas.T*input)
         if self.prev_inc is None:
@@ -211,5 +212,7 @@ class Layer:
 dataset = np.array([[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 0]])
 network = MLP(2, [5, 5], 1, 0.01, 0.2, reg_term=0.001)
 network.fit(dataset, 1000)
+
+
 print(dataset[:, -1])
 print(network.predict(dataset[:, :-1]))

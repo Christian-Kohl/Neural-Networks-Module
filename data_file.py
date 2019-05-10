@@ -41,3 +41,7 @@ def corr_features_output(df):
     output_corr = pd.Series.sort_values(pd.Series.abs(output_corr),
                                         ascending=False)
     return output_corr.index.values
+
+
+dataset, df = load_data()
+print(corr_features_output(df))

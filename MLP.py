@@ -1,16 +1,18 @@
 import numpy as np
+from sklearn.utils import shuffle
 
 
 class MLP:
     layers = []
     learning_rate = 1
     classOrReg = False
-    momentum = None
+    momentum = 0
     reg_term = 0
 
     def __init__(self,
                  input_size,
-                 nodes, output_size,
+                 nodes,
+                 output_size,
                  learning_rate,
                  momentum=None,
                  reg_term=0):
@@ -106,25 +108,24 @@ class MLP:
                                      self.momentum)
         return self.layers[0].deltas
 
-    def fit(self, dataset, epochs, test_set=None):
-        if test_set is None:
+    def fit(self, X_train, y_train, X_test=None, y_test=None, epochs=100):
+        if y_train is None:
             for epoch in range(1, epochs+1):
-                np.random.shuffle(dataset)
-                for point in dataset:
-                    self.backpropogation(point[:-1], point[-1])
+                shuffle(X_train, y_train)
+                for idx, point in enumerate(X_train):
+                    self.backpropogation(point, y_train[idx])
                 print('Epoch number: ', epoch, '  error: ',
-                      self.mse_loss(dataset[:, :-1],
-                                    dataset[:, -1]))
+                      self.mse_loss(X_train, y_train))
         else:
             log = []
             for epoch in range(1, epochs+1):
-                np.random.shuffle(dataset)
-                for point in dataset:
-                    self.backpropogation(point[:-1], point[-1])
-                train_loss = self.mse_loss(dataset[:, :-1],
-                                           dataset[:, -1])
-                test_loss = self.mse_loss(test_set[:, :-1],
-                                          test_set[:, -1])
+                shuffle(X_train, y_train)
+                for idx, point in enumerate(X_train):
+                    self.backpropogation(point, y_train[idx])
+                train_loss = self.mse_loss_wo_reg(X_train,
+                                                  y_train)/X_train.shape[1]
+                test_loss = self.mse_loss_wo_reg(X_test,
+                                                 y_test)/X_test.shape[1]
                 log += [[train_loss, test_loss]]
                 print('Epoch number: ',
                       epoch,

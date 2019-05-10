@@ -207,12 +207,3 @@ class Layer:
             inc = multiplier + (momentum * self.prev_inc) + reg
         self.weights = self.weights + inc
         self.prev_inc = inc
-
-
-dataset = np.array([[0, 0, 0], [1, 1, 1], [1, 0, 1], [0, 1, 0]])
-network = MLP(2, [5, 5], 1, 0.01, 0.2, reg_term=0.001)
-network.fit(dataset, 1000)
-
-
-print(dataset[:, -1])
-print(network.predict(dataset[:, :-1]))
